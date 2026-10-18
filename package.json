@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
+    "android": "cmd /c \"set ANDROID_HOME=D:\\SDKadroid&& expo start --android\"",
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "jest"

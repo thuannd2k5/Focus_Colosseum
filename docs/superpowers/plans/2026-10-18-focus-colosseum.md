@@ -43,7 +43,7 @@
 - Consumes: Node.js, npm, Expo CLI
 - Produces: Base project structure, TypeScript configuration, core domain types (`UserProfile`, `Room`, `RoomParticipant`, `SessionLog`)
 
-- [ ] **Step 1: Write the failing setup test**
+- [x] **Step 1: Write the failing setup test**
 
 ```typescript
 // tests/setup.test.ts
@@ -55,25 +55,25 @@ describe('Project Environment Setup', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx jest tests/setup.test.ts`  
 Expected: FAIL (cannot find `tsconfig.json` or jest runner)
 
-- [ ] **Step 3: Initialize Expo TypeScript project scaffolding**
+- [x] **Step 3: Initialize Expo TypeScript project scaffolding**
 
 Scaffold standard Expo React Native project with TypeScript configuration, create directory structure (`src/components`, `src/screens`, `src/hooks`, `src/services`, `src/types`), and install dependencies (`@supabase/supabase-js`, `expo-sensors`, `expo-keep-awake`, `expo-haptics`, `expo-av`).
 
-- [ ] **Step 4: Define domain TypeScript interfaces in `src/types/index.ts`**
+- [x] **Step 4: Define domain TypeScript interfaces in `src/types/index.ts`**
 
 Define `UserProfile` (id, email, displayName, role, status, streak, totalMinutes), `Room` (id, code, hostId, durationMinutes, status), `RoomParticipant` (roomId, userId, displayName, status, isFacedDown), and `SessionResult`.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npx jest tests/setup.test.ts`  
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add package.json tsconfig.json app.json src/ tests/
@@ -94,7 +94,7 @@ git commit -m "chore: scaffold project structure and core types"
 - Consumes: `src/types/index.ts` (`UserProfile`)
 - Produces: `authService.signUp`, `authService.signIn`, `authService.signOut`, `authService.getProfile`, `useAuth()` hook providing `user`, `profile`, `isAdmin`, `isBanned`
 
-- [ ] **Step 1: Write failing tests for Auth service and ban checking**
+- [x] **Step 1: Write failing tests for Auth service and ban checking**
 
 ```typescript
 // tests/services/authService.test.ts
@@ -117,25 +117,25 @@ describe('authService.isUserBanned', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx jest tests/services/authService.test.ts`  
 Expected: FAIL (cannot resolve `authService`)
 
-- [ ] **Step 3: Implement Supabase client & Auth service**
+- [x] **Step 3: Implement Supabase client & Auth service**
 
 Implement `src/services/supabase.ts` initialization with mock/fallback environment configs, `src/services/authService.ts` with profile retrieval, role resolution, and `isUserBanned` helper.
 
-- [ ] **Step 4: Implement `useAuth` React Context Provider**
+- [x] **Step 4: Implement `useAuth` React Context Provider**
 
 Create `src/hooks/useAuth.tsx` managing user session, automatic profile sync, and exposed flags (`isAuthenticated`, `isAdmin`, `isBanned`).
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `npx jest tests/services/authService.test.ts`  
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/services/ src/hooks/useAuth.tsx tests/services/
@@ -156,7 +156,7 @@ git commit -m "feat: implement auth service, profile management and useAuth hook
 - Consumes: `useAuth` hook, `authService`
 - Produces: Visual login, registration screens, and a non-dismissible `BannedModal` alert when account status is `banned`
 
-- [ ] **Step 1: Write failing component tests for Login & Banned states**
+- [x] **Step 1: Write failing component tests for Login & Banned states**
 
 ```typescript
 // tests/screens/AuthScreens.test.tsx
@@ -172,21 +172,21 @@ describe('BannedModal', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx jest tests/screens/AuthScreens.test.tsx`  
 Expected: FAIL (cannot resolve `BannedModal`)
 
-- [ ] **Step 3: Implement `BannedModal`, `LoginScreen`, and `RegisterScreen`**
+- [x] **Step 3: Implement `BannedModal`, `LoginScreen`, and `RegisterScreen`**
 
 Design responsive dark-themed auth forms with validation for email and password. Implement `BannedModal` that prevents interaction and offers only a Sign Out button.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx jest tests/screens/AuthScreens.test.tsx`  
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/screens/LoginScreen.tsx src/screens/RegisterScreen.tsx src/components/BannedModal.tsx tests/screens/
@@ -207,7 +207,7 @@ git commit -m "feat: add login, register screens and banned modal"
 - Consumes: `expo-sensors` (Accelerometer), `AppState`, `expo-keep-awake`, `expo-haptics`, `expo-av`
 - Produces: `useSensors({ onViolation, onRecover }) -> { isFacedDown, isInGracePeriod, graceSecondsLeft, activateSensors, deactivateSensors }`
 
-- [ ] **Step 1: Write unit tests for sensor orientation calculations and grace timer logic**
+- [x] **Step 1: Write unit tests for sensor orientation calculations and grace timer logic**
 
 ```typescript
 // tests/hooks/useSensors.test.ts
@@ -225,25 +225,25 @@ describe('useSensors: isOrientationFacedDown', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx jest tests/hooks/useSensors.test.ts`  
 Expected: FAIL (cannot resolve `isOrientationFacedDown`)
 
-- [ ] **Step 3: Implement `useSensors` hook with 10-second grace countdown**
+- [x] **Step 3: Implement `useSensors` hook with 10-second grace countdown**
 
 Implement `isOrientationFacedDown(data)` helper with tolerance $Z \in [-1.2, -0.8]$. Integrate `AppState.addEventListener` to capture background transitions. Start 10s countdown upon violation, invoke haptic buzz via `expo-haptics`, and trigger `onViolation()` only if grace period expires without recovery.
 
-- [ ] **Step 4: Implement `ZenScreen` and `soundService`**
+- [x] **Step 4: Implement `ZenScreen` and `soundService`**
 
 Build `ZenScreen` displaying OLED pure black (#000000) with ultra-minimal dim clock. Build `soundService` to play alert buzz / horn using `expo-av` and `expo-haptics`.
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `npx jest tests/hooks/useSensors.test.ts`  
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/hooks/useSensors.ts src/services/soundService.ts src/components/ZenScreen.tsx tests/hooks/
@@ -263,7 +263,7 @@ git commit -m "feat: implement hardware sensor detection, 10s grace period and Z
 - Consumes: `src/services/supabase.ts`, `UserProfile`
 - Produces: `roomService.createRoom(duration, hostProfile)`, `roomService.joinRoom(code, userProfile)`, `useRealtimeRoom(roomId)` managing room state, participants list, and failure broadcast.
 
-- [ ] **Step 1: Write test for room creation and banned user guard**
+- [x] **Step 1: Write test for room creation and banned user guard**
 
 ```typescript
 // tests/services/roomService.test.ts
@@ -286,25 +286,25 @@ describe('canUserEnterRoom', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx jest tests/services/roomService.test.ts`  
 Expected: FAIL (cannot resolve `roomService`)
 
-- [ ] **Step 3: Implement `roomService` with 6-digit PIN generator and permission checks**
+- [x] **Step 3: Implement `roomService` with 6-digit PIN generator and permission checks**
 
 Generate unique 6-digit numerical PINs. Enforce `canUserEnterRoom` check before executing room creation or participant join.
 
-- [ ] **Step 4: Implement `useRealtimeRoom` hook using Supabase Presence & Broadcast**
+- [x] **Step 4: Implement `useRealtimeRoom` hook using Supabase Presence & Broadcast**
 
 Manage peer presence tracking, sync session start timestamp, broadcast member failure events (`MEMBER_FAILED: { userId, displayName }`), and arbitrate room-level failure state.
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `npx jest tests/services/roomService.test.ts`  
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/services/roomService.ts src/hooks/useRealtimeRoom.ts tests/services/
@@ -327,7 +327,7 @@ git commit -m "feat: implement room service, pin generation and realtime room sy
 - Consumes: `useAuth`, `useSensors`, `useRealtimeRoom`
 - Produces: Complete navigable user flow from Home to active session to Result
 
-- [ ] **Step 1: Write component test for HomeScreen navigation and streak display**
+- [x] **Step 1: Write component test for HomeScreen navigation and streak display**
 
 ```typescript
 // tests/screens/HomeScreen.test.tsx
@@ -354,29 +354,29 @@ describe('HomeScreen', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx jest tests/screens/HomeScreen.test.tsx`  
 Expected: FAIL (cannot resolve `HomeScreen`)
 
-- [ ] **Step 3: Implement `HomeScreen` and `CreateJoinRoomScreen`**
+- [x] **Step 3: Implement `HomeScreen` and `CreateJoinRoomScreen`**
 
 Display user profile, streak banner, and buttons for "Tạo phòng mới" (choose 15, 25, 30, 45 mins) and "Vào phòng bằng mã PIN".
 
-- [ ] **Step 4: Implement `LobbyScreen`**
+- [x] **Step 4: Implement `LobbyScreen`**
 
 Show room PIN in large clear typography, list joined participants (2–6 users) with ready indicator, and start button for host.
 
-- [ ] **Step 5: Implement `FocusSessionScreen` & `ResultScreen`**
+- [x] **Step 5: Implement `FocusSessionScreen` & `ResultScreen`**
 
 Integrate `useSensors` and `ZenScreen`. When phone is flipped face-down, activate Zen screen. When timer completes, navigate to `ResultScreen` showing victory; if a participant fails, show defeat screen highlighting who broke focus.
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 Run: `npx jest tests/screens/HomeScreen.test.tsx`  
 Expected: PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/screens/HomeScreen.tsx src/screens/CreateJoinRoomScreen.tsx src/screens/LobbyScreen.tsx src/screens/FocusSessionScreen.tsx src/screens/ResultScreen.tsx tests/screens/
@@ -396,7 +396,7 @@ git commit -m "feat: implement home, lobby, focus session and result screens"
 - Consumes: `useAuth`, `src/services/supabase.ts`
 - Produces: `adminService.listUsers()`, `adminService.toggleUserBan(userId, currentStatus)`, `AdminDashboardScreen`
 
-- [ ] **Step 1: Write test for Admin ban toggle logic**
+- [x] **Step 1: Write test for Admin ban toggle logic**
 
 ```typescript
 // tests/screens/AdminDashboard.test.tsx
@@ -410,25 +410,25 @@ describe('adminService: toggleBanStatus', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx jest tests/screens/AdminDashboard.test.tsx`  
 Expected: FAIL (cannot resolve `adminService`)
 
-- [ ] **Step 3: Implement `adminService`**
+- [x] **Step 3: Implement `adminService`**
 
 Implement functions to fetch user profiles list, search users by display name or email, and update user status between `active` and `banned`.
 
-- [ ] **Step 4: Implement `AdminDashboardScreen`**
+- [x] **Step 4: Implement `AdminDashboardScreen`**
 
 Build search bar, user list item with user role and status badge, and an actionable "Khóa tài khoản" / "Mở khóa" button with confirmation alert.
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `npx jest tests/screens/AdminDashboard.test.tsx`  
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/screens/AdminDashboardScreen.tsx src/services/adminService.ts tests/screens/
@@ -448,7 +448,7 @@ git commit -m "feat: implement admin dashboard and user ban management system"
 - Consumes: All screens from Tasks 3, 6, 7
 - Produces: Main application entry point with authentication routing, admin guard, and banned status interceptor.
 
-- [ ] **Step 1: Write end-to-end integration test for routing flow**
+- [x] **Step 1: Write end-to-end integration test for routing flow**
 
 ```typescript
 // tests/integration/appFlow.test.tsx
@@ -464,21 +464,21 @@ describe('Application Root Navigation', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx jest tests/integration/appFlow.test.tsx`  
 Expected: FAIL (cannot resolve `App`)
 
-- [ ] **Step 3: Implement Root Navigator in `App.tsx`**
+- [x] **Step 3: Implement Root Navigator in `App.tsx`**
 
 Integrate `AuthProvider`. If unauthenticated $\rightarrow$ show `LoginScreen` / `RegisterScreen`. If authenticated and banned $\rightarrow$ show `BannedModal`. If admin $\rightarrow$ show navigation bar with Admin Dashboard tab. If regular user $\rightarrow$ standard Home/Room flow.
 
-- [ ] **Step 4: Run all tests across the entire test suite**
+- [x] **Step 4: Run all tests across the entire test suite**
 
 Run: `npx jest`  
 Expected: PASS all test suites
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add App.tsx tests/integration/

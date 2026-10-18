@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { AuthProvider, useAuth } from './src/hooks/useAuth';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { RegisterScreen } from './src/screens/RegisterScreen';
@@ -10,16 +10,17 @@ import { FocusSessionScreen } from './src/screens/FocusSessionScreen';
 import { ResultScreen } from './src/screens/ResultScreen';
 import { AdminDashboardScreen } from './src/screens/AdminDashboardScreen';
 import { BannedModal } from './src/components/BannedModal';
-import { Room } from './src/types';
+import { useRealtimeRoom } from './src/hooks/useRealtimeRoom';
+import { soundService } from './src/services/soundService';
+import { authService } from './src/services/authService';
+import { Room, UserProfile } from './src/types';
 
 type ScreenName =
   | 'login'
   | 'register'
   | 'home'
   | 'create-join'
-  | 'lobby'
-  | 'focus-session'
-  | 'result'
+  | 'active-room'
   | 'admin';
 
 interface SessionResultState {
@@ -28,11 +29,126 @@ interface SessionResultState {
   failedBy?: { userId: string; displayName: string; reason?: string };
 }
 
+interface ActiveRoomCoordinatorProps {
+  room: Room;
+  profile: UserProfile;
+  onExit: () => void;
+  onSessionSuccess: (minutes: number) => Promise<void>;
+}
+
+const ActiveRoomCoordinator: React.FC<ActiveRoomCoordinatorProps> = ({
+  room,
+  profile,
+  onExit,
+  onSessionSuccess,
+}) => {
+  const [roomScreen, setRoomScreen] = useState<'lobby' | 'session' | 'result'>('lobby');
+  const [sessionResult, setSessionResult] = useState<SessionResultState | null>(null);
+
+  const {
+    participants,
+    startSession,
+  } = useRealtimeRoom({
+    roomId: room.id,
+    currentUser: profile,
+    onSessionStart: () => {
+      setRoomScreen('session');
+    },
+    onRoomFailed: (failed) => {
+      soundService.playViolationAlarm();
+      setSessionResult({
+        status: 'failed',
+        durationMinutes: room.durationMinutes,
+        failedBy: failed,
+      });
+      setRoomScreen('result');
+    },
+    onSessionComplete: async () => {
+      soundService.playSuccessFanfare();
+      await onSessionSuccess(room.durationMinutes);
+      setSessionResult({
+        status: 'completed',
+        durationMinutes: room.durationMinutes,
+      });
+      setRoomScreen('result');
+    },
+    onParticipantDisconnected: (disconnectedPeer) => {
+      Alert.alert(
+        'Thành viên mất kết nối!',
+        `Chiến binh "${disconnectedPeer.displayName}" đã mất tín hiệu nhịp tim quá 15 giây.`
+      );
+    },
+  });
+
+  const displayedParticipants =
+    participants.length > 0
+      ? participants
+      : [
+          {
+            roomId: room.id,
+            userId: profile.id,
+            displayName: profile.displayName,
+            status: 'ready' as const,
+            isFacedDown: false,
+          },
+        ];
+
+  if (roomScreen === 'lobby') {
+    return (
+      <LobbyScreen
+        room={room}
+        participants={displayedParticipants}
+        isHost={room.hostId === profile.id}
+        onStartSession={startSession}
+        onLeaveRoom={onExit}
+      />
+    );
+  }
+
+  if (roomScreen === 'session') {
+    return (
+      <FocusSessionScreen
+        room={room}
+        currentUser={profile}
+        onSessionFinish={async (status, failedBy) => {
+          if (status === 'completed') {
+            await onSessionSuccess(room.durationMinutes);
+          }
+          setSessionResult({
+            status,
+            durationMinutes: room.durationMinutes,
+            failedBy,
+          });
+          setRoomScreen('result');
+        }}
+      />
+    );
+  }
+
+  return (
+    <ResultScreen
+      status={sessionResult?.status || 'completed'}
+      durationMinutes={sessionResult?.durationMinutes || room.durationMinutes}
+      failedBy={sessionResult?.failedBy}
+      onBackHome={onExit}
+    />
+  );
+};
+
 const MainApp: React.FC = () => {
-  const { profile, loading, isAuthenticated, isBanned, signIn, signUp, signOut } = useAuth();
+  const { profile, loading, isAuthenticated, isBanned, signIn, signUp, signOut, refreshProfile } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('home');
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
-  const [sessionResult, setSessionResult] = useState<SessionResultState | null>(null);
+
+  const handleSessionSuccess = async (minutes: number) => {
+    if (profile) {
+      await authService.updateProfile(profile.id, {
+        streak: profile.streak + 1,
+        totalFocusMinutes: profile.totalFocusMinutes + minutes,
+      });
+      await refreshProfile();
+    }
+  };
 
   if (loading) {
     return (
@@ -110,58 +226,21 @@ const MainApp: React.FC = () => {
           profile={profile}
           onRoomReady={(room) => {
             setActiveRoom(room);
-            setCurrentScreen('lobby');
+            setCurrentScreen('active-room');
           }}
           onBack={() => setCurrentScreen('home')}
         />
       )}
 
-      {currentScreen === 'lobby' && activeRoom && (
-        <LobbyScreen
+      {currentScreen === 'active-room' && activeRoom && (
+        <ActiveRoomCoordinator
           room={activeRoom}
-          participants={[
-            {
-              roomId: activeRoom.id,
-              userId: profile.id,
-              displayName: profile.displayName,
-              status: 'ready',
-              isFacedDown: false,
-            },
-          ]}
-          isHost={activeRoom.hostId === profile.id}
-          onStartSession={() => setCurrentScreen('focus-session')}
-          onLeaveRoom={() => {
+          profile={profile}
+          onExit={() => {
             setActiveRoom(null);
             setCurrentScreen('home');
           }}
-        />
-      )}
-
-      {currentScreen === 'focus-session' && activeRoom && (
-        <FocusSessionScreen
-          room={activeRoom}
-          currentUser={profile}
-          onSessionFinish={(status, failedBy) => {
-            setSessionResult({
-              status,
-              durationMinutes: activeRoom.durationMinutes,
-              failedBy,
-            });
-            setCurrentScreen('result');
-          }}
-        />
-      )}
-
-      {currentScreen === 'result' && sessionResult && (
-        <ResultScreen
-          status={sessionResult.status}
-          durationMinutes={sessionResult.durationMinutes}
-          failedBy={sessionResult.failedBy}
-          onBackHome={() => {
-            setActiveRoom(null);
-            setSessionResult(null);
-            setCurrentScreen('home');
-          }}
+          onSessionSuccess={handleSessionSuccess}
         />
       )}
 

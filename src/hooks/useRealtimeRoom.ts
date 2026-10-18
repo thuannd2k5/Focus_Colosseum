@@ -3,12 +3,16 @@ import { supabase } from '../services/supabase';
 import { roomService } from '../services/roomService';
 import { Room, RoomParticipant, RoomStatus, UserProfile } from '../types';
 
+export const HEARTBEAT_TIMEOUT_MS = 15000;
+export const HEARTBEAT_INTERVAL_MS = 5000;
+
 interface UseRealtimeRoomOptions {
   roomId: string;
   currentUser: UserProfile | null;
   onSessionStart?: () => void;
   onRoomFailed?: (failedBy: { userId: string; displayName: string; reason?: string }) => void;
   onSessionComplete?: () => void;
+  onParticipantDisconnected?: (participant: RoomParticipant) => void;
 }
 
 export const useRealtimeRoom = ({
@@ -17,6 +21,7 @@ export const useRealtimeRoom = ({
   onSessionStart,
   onRoomFailed,
   onSessionComplete,
+  onParticipantDisconnected,
 }: UseRealtimeRoomOptions) => {
   const [room, setRoom] = useState<Room | null>(null);
   const [participants, setParticipants] = useState<RoomParticipant[]>([]);
@@ -29,6 +34,11 @@ export const useRealtimeRoom = ({
   const [loading, setLoading] = useState<boolean>(true);
 
   const channelRef = useRef<any>(null);
+  const participantsRef = useRef<RoomParticipant[]>([]);
+  participantsRef.current = participants;
+
+  const onParticipantDisconnectedRef = useRef(onParticipantDisconnected);
+  onParticipantDisconnectedRef.current = onParticipantDisconnected;
 
   const refreshRoomAndParticipants = useCallback(async () => {
     if (!roomId) return;
@@ -47,7 +57,6 @@ export const useRealtimeRoom = ({
   useEffect(() => {
     refreshRoomAndParticipants();
 
-    // Subscribe to Supabase Realtime channel for room presence and broadcast
     const channelName = `room:${roomId}`;
     const channel = supabase.channel(channelName, {
       config: {
@@ -59,7 +68,7 @@ export const useRealtimeRoom = ({
 
     channelRef.current = channel;
 
-    // Track presence
+    // Track presence sync
     channel.on('presence', { event: 'sync' }, () => {
       const presenceState = channel.presenceState();
       const updatedList: RoomParticipant[] = [];
@@ -84,6 +93,27 @@ export const useRealtimeRoom = ({
       }
     });
 
+    // Track presence leave
+    channel.on('presence', { event: 'leave' }, ({ leftPresences }: any) => {
+      if (leftPresences && Array.isArray(leftPresences)) {
+        leftPresences.forEach((lp) => {
+          const leftUserId = lp.userId;
+          setParticipants((prev) =>
+            prev.map((p) => {
+              if (p.userId === leftUserId) {
+                const disconnectedPeer = { ...p, status: 'disconnected' as const };
+                if (onParticipantDisconnectedRef.current) {
+                  onParticipantDisconnectedRef.current(disconnectedPeer);
+                }
+                return disconnectedPeer;
+              }
+              return p;
+            })
+          );
+        });
+      }
+    });
+
     // Listen to broadcast events
     channel
       .on('broadcast', { event: 'SESSION_START' }, () => {
@@ -101,7 +131,6 @@ export const useRealtimeRoom = ({
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED' && currentUser) {
-          // Track current user presence
           await channel.track({
             userId: currentUser.id,
             displayName: currentUser.displayName,
@@ -112,7 +141,7 @@ export const useRealtimeRoom = ({
         }
       });
 
-    // Heartbeat ticker: every 5 seconds send presence update
+    // Heartbeat transmitter: Every 5s send our heartbeat
     const heartbeatInterval = setInterval(() => {
       if (channel && currentUser) {
         channel.track({
@@ -123,10 +152,37 @@ export const useRealtimeRoom = ({
           lastHeartbeat: Date.now(),
         }).catch(() => {});
       }
-    }, 5000);
+    }, HEARTBEAT_INTERVAL_MS);
+
+    // Heartbeat monitor: Every 3s check if any peer has exceeded 15s timeout
+    const monitorInterval = setInterval(() => {
+      const now = Date.now();
+      setParticipants((current) => {
+        let changed = false;
+        const updated = current.map((p) => {
+          if (
+            currentUser &&
+            p.userId !== currentUser.id &&
+            p.status !== 'disconnected' &&
+            p.lastHeartbeat &&
+            now - p.lastHeartbeat > HEARTBEAT_TIMEOUT_MS
+          ) {
+            changed = true;
+            const timedOutPeer = { ...p, status: 'disconnected' as const };
+            if (onParticipantDisconnectedRef.current) {
+              onParticipantDisconnectedRef.current(timedOutPeer);
+            }
+            return timedOutPeer;
+          }
+          return p;
+        });
+        return changed ? updated : current;
+      });
+    }, 3000);
 
     return () => {
       clearInterval(heartbeatInterval);
+      clearInterval(monitorInterval);
       channel.unsubscribe();
     };
   }, [roomId, currentUser, onSessionStart, onRoomFailed, onSessionComplete, refreshRoomAndParticipants, roomStatus]);
@@ -140,6 +196,9 @@ export const useRealtimeRoom = ({
         event: 'SESSION_START',
         payload: { startedAt: new Date().toISOString() },
       });
+    }
+    if (onSessionStart) {
+      onSessionStart();
     }
   };
 
@@ -160,6 +219,9 @@ export const useRealtimeRoom = ({
         event: 'MEMBER_FAILED',
         payload,
       });
+    }
+    if (onRoomFailed) {
+      onRoomFailed(payload);
     }
   };
 
@@ -184,6 +246,9 @@ export const useRealtimeRoom = ({
         event: 'SESSION_COMPLETED',
         payload: { completedAt: new Date().toISOString() },
       });
+    }
+    if (onSessionComplete) {
+      onSessionComplete();
     }
   };
 

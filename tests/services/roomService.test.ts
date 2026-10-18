@@ -49,4 +49,19 @@ describe('roomService API methods', () => {
     expect(typeof roomService.getRoom).toBe('function');
     expect(typeof roomService.updateRoomStatus).toBe('function');
   });
+
+  it('should reject banned user in joinRoom with an explicit error', async () => {
+    const bannedUser: UserProfile = {
+      id: 'banned-1',
+      email: 'banned@test.com',
+      displayName: 'BannedGuy',
+      role: 'user',
+      status: 'banned',
+      streak: 0,
+      totalFocusMinutes: 0,
+    };
+    const result = await roomService.joinRoom('123456', bannedUser);
+    expect(result.room).toBeNull();
+    expect(result.error?.message).toMatch(/bị khóa/i);
+  });
 });

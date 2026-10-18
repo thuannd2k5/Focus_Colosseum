@@ -42,15 +42,15 @@ export const FocusSessionScreen: React.FC<FocusSessionScreenProps> = ({
     },
   });
 
-  const handleViolation = () => {
+  const handleViolation = React.useCallback(() => {
     soundService.playViolationAlarm();
     notifyViolation('Lật máy hoặc rời ứng dụng quá thời gian ân hạn 10s');
-  };
+  }, [notifyViolation]);
 
-  const handleRecover = () => {
+  const handleRecover = React.useCallback(() => {
     soundService.stopAlarm();
     notifyFaceDown(true);
-  };
+  }, [notifyFaceDown]);
 
   const { isFacedDown, isInGracePeriod, graceSecondsLeft } = useSensors({
     enabled: true,

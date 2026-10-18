@@ -37,20 +37,27 @@ export const useSensors = ({
   const [isInGracePeriod, setIsInGracePeriod] = useState<boolean>(false);
   const [graceSecondsLeft, setGraceSecondsLeft] = useState<number>(SENSOR_TOLERANCE.GRACE_PERIOD_SECONDS);
 
+  // Keep latest callbacks in refs so effects do not re-run on callback identity changes
+  const onViolationRef = useRef(onViolation);
+  const onRecoverRef = useRef(onRecover);
+  useEffect(() => {
+    onViolationRef.current = onViolation;
+    onRecoverRef.current = onRecover;
+  });
+
   const graceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInGracePeriodRef = useRef<boolean>(false);
   const isFacedDownRef = useRef<boolean>(false);
   const isAppActiveRef = useRef<boolean>(true);
 
-  // Keep ref up to date
-  isFacedDownRef.current = isFacedDown;
-
   const startGracePeriod = useCallback(() => {
-    if (graceTimerRef.current) return; // already running
+    if (isInGracePeriodRef.current) return; // already in grace period
 
+    isInGracePeriodRef.current = true;
     setIsInGracePeriod(true);
     setGraceSecondsLeft(SENSOR_TOLERANCE.GRACE_PERIOD_SECONDS);
 
-    // Haptic alert on initial violation
+    // Haptic warning
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } catch {}
@@ -60,7 +67,6 @@ export const useSensors = ({
       seconds -= 1;
       setGraceSecondsLeft(seconds);
 
-      // Pulse haptic during countdown
       try {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       } catch {}
@@ -70,30 +76,40 @@ export const useSensors = ({
           clearInterval(graceTimerRef.current);
           graceTimerRef.current = null;
         }
+        isInGracePeriodRef.current = false;
         setIsInGracePeriod(false);
-        if (onViolation) {
-          onViolation();
+        if (onViolationRef.current) {
+          onViolationRef.current();
         }
       }
     }, 1000);
-  }, [onViolation]);
+  }, []);
 
   const cancelGracePeriod = useCallback(() => {
+    if (!isInGracePeriodRef.current) return;
+
     if (graceTimerRef.current) {
       clearInterval(graceTimerRef.current);
       graceTimerRef.current = null;
     }
+    isInGracePeriodRef.current = false;
     setIsInGracePeriod(false);
     setGraceSecondsLeft(SENSOR_TOLERANCE.GRACE_PERIOD_SECONDS);
-    if (onRecover) {
-      onRecover();
-    }
-  }, [onRecover]);
 
-  // Monitor sensor and app state changes
+    if (onRecoverRef.current) {
+      onRecoverRef.current();
+    }
+  }, []);
+
+  // Monitor sensor and app lifecycle
   useEffect(() => {
     if (!enabled) {
-      cancelGracePeriod();
+      if (graceTimerRef.current) {
+        clearInterval(graceTimerRef.current);
+        graceTimerRef.current = null;
+      }
+      isInGracePeriodRef.current = false;
+      setIsInGracePeriod(false);
       deactivateKeepAwake();
       return;
     }
@@ -101,16 +117,17 @@ export const useSensors = ({
     // Keep screen awake while focusing
     activateKeepAwakeAsync().catch(() => {});
 
-    // Set accelerometer polling rate
-    Accelerometer.setUpdateInterval(500); // 2 times per second is battery friendly
+    // Polling rate 500ms
+    Accelerometer.setUpdateInterval(500);
 
     const accelSubscription = Accelerometer.addListener((data) => {
       const faceDown = isOrientationFacedDown(data);
+      isFacedDownRef.current = faceDown;
       setIsFacedDown(faceDown);
 
       if (!faceDown && isAppActiveRef.current) {
         startGracePeriod();
-      } else if (faceDown && isAppActiveRef.current && isInGracePeriod) {
+      } else if (faceDown && isAppActiveRef.current && isInGracePeriodRef.current) {
         cancelGracePeriod();
       }
     });
@@ -121,7 +138,7 @@ export const useSensors = ({
 
       if (!active) {
         startGracePeriod();
-      } else if (isFacedDownRef.current) {
+      } else if (isFacedDownRef.current && isInGracePeriodRef.current) {
         cancelGracePeriod();
       }
     });
@@ -133,9 +150,10 @@ export const useSensors = ({
         clearInterval(graceTimerRef.current);
         graceTimerRef.current = null;
       }
+      isInGracePeriodRef.current = false;
       deactivateKeepAwake();
     };
-  }, [enabled, isInGracePeriod, startGracePeriod, cancelGracePeriod]);
+  }, [enabled, startGracePeriod, cancelGracePeriod]);
 
   return {
     isFacedDown,

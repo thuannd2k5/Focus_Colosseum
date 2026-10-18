@@ -345,13 +345,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginRight: 8,
   },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
   activeBadge: {
     backgroundColor: 'rgba(63, 185, 80, 0.2)',
   },
   activeBadgeText: {
     color: '#3FB950',
-    fontSize: 11,
-    fontWeight: '600',
   },
   bannedBadge: {
     backgroundColor: 'rgba(248, 81, 73, 0.2)',
